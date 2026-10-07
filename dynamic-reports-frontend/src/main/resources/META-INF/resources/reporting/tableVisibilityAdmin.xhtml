@@ -1,0 +1,140 @@
+<ui:component xmlns="http://www.w3.org/1999/xhtml"
+              xmlns:h="http://java.sun.com/jsf/html"
+              xmlns:f="http://java.sun.com/jsf/core"
+              xmlns:ui="http://java.sun.com/jsf/facelets"
+              xmlns:p="http://primefaces.org/ui"
+              xmlns:cc="http://java.sun.com/jsf/composite">
+
+    <cc:interface/>
+
+    <cc:implementation>
+        <ui:fragment rendered="#{not reportingAccessBean.administrator}">
+            <div style="padding:16px;color:#991b1b;">You do not have permission to view this page.</div>
+        </ui:fragment>
+        <h:form id="tableVisibilityForm" rendered="#{reportingAccessBean.administrator}">
+            <p:growl id="msgs" showSummary="true" severity="info,warn,error"/>
+
+            <p:tabView id="visTabs" dynamic="false" cache="false">
+                <p:tab title="Tables">
+                    <div class="card">
+                        <h3 style="margin-top:0;">Table Visibility</h3>
+                        <p style="color:#6b7280;font-size:0.85rem;">
+                            Every table is hidden from dataset authors until you explicitly enable it here - tick
+                            "Visible" and Save to allow a table to be picked as a dataset source. Use "Columns" to
+                            also set which of its columns are visible/filterable/sortable by default.
+                        </p>
+                        <p:dataTable id="tablesGrid" value="#{tableVisibilityAdminBean.tableRows}" var="row"
+                                     paginator="true" rows="20"
+                                     paginatorTemplate="{FirstPageLink} {PreviousPageLink} {CurrentPageReport} {NextPageLink} {LastPageLink}"
+                                     emptyMessage="No tables found.">
+                            <p:column headerText="Table">
+                                <h:outputText value="#{row.tableName}"/>
+                            </p:column>
+                            <p:column headerText="Display Name">
+                                <p:inputText value="#{row.displayName}" style="width:100%;"/>
+                            </p:column>
+                            <p:column style="width:100px;white-space:nowrap;">
+                                <f:facet name="header">
+                                    <p:selectBooleanCheckbox value="#{tableVisibilityAdminBean.allTablesVisible}" itemLabel="Visible">
+                                        <p:ajax listener="#{tableVisibilityAdminBean.toggleAllTablesVisible()}" process="@this" update=":visUI:tableVisibilityForm:visTabs:tablesGrid"/>
+                                    </p:selectBooleanCheckbox>
+                                </f:facet>
+                                <p:selectBooleanCheckbox value="#{row.visible}"/>
+                            </p:column>
+                            <p:column style="width:100px;">
+                                <p:commandButton value="Columns" icon="fa fa-table"
+                                                 actionListener="#{tableVisibilityAdminBean.editColumns(row.tableName)}"
+                                                 process="@this" update=":visUI:tableVisibilityForm:visTabs:columnsPanel"
+                                                 styleClass="blue-btn MarginLeft5"/>
+                            </p:column>
+                        </p:dataTable>
+                        <p:commandButton value="Save All Changes" icon="fa fa-check"
+                                         actionListener="#{tableVisibilityAdminBean.saveTables()}"
+                                         process="@form" update=":visUI:tableVisibilityForm:visTabs:tablesGrid :visUI:tableVisibilityForm:msgs"
+                                         styleClass="green-btn MarginTop5"/>
+                    </div>
+
+                    <p:outputPanel id="columnsPanel">
+                        <ui:fragment rendered="#{not empty tableVisibilityAdminBean.selectedTableName}">
+                            <div class="card MarginTop5">
+                                <div style="display:flex;align-items:center;justify-content:space-between;">
+                                    <h3 style="margin:0;">Columns of #{tableVisibilityAdminBean.selectedTableName}</h3>
+                                    <p:commandButton value="Close" icon="fa fa-times"
+                                                     actionListener="#{tableVisibilityAdminBean.closeColumns()}"
+                                                     process="@this" update=":visUI:tableVisibilityForm:visTabs:columnsPanel"/>
+                                </div>
+                                <p:dataTable id="columnRowsGrid" value="#{tableVisibilityAdminBean.columnRows}" var="col"
+                                             emptyMessage="This table has no columns.">
+                                    <p:column headerText="Column">
+                                        <h:outputText value="#{col.columnName}"/>
+                                    </p:column>
+                                    <p:column headerText="Type">
+                                        <h:outputText value="#{col.typeName}"/>
+                                    </p:column>
+                                    <p:column style="width:100px;white-space:nowrap;">
+                                        <f:facet name="header">
+                                            <p:selectBooleanCheckbox value="#{tableVisibilityAdminBean.allColumnsVisible}" itemLabel="Visible">
+                                                <p:ajax listener="#{tableVisibilityAdminBean.toggleAllColumnsVisible()}" process="@this" update=":visUI:tableVisibilityForm:visTabs:columnRowsGrid"/>
+                                            </p:selectBooleanCheckbox>
+                                        </f:facet>
+                                        <p:selectBooleanCheckbox value="#{col.visible}">
+                                            <p:ajax listener="#{tableVisibilityAdminBean.onColumnVisibleToggled(col)}" process="@this" update=":visUI:tableVisibilityForm:visTabs:columnRowsGrid"/>
+                                        </p:selectBooleanCheckbox>
+                                    </p:column>
+                                    <p:column style="width:120px;white-space:nowrap;">
+                                        <f:facet name="header">
+                                            <p:selectBooleanCheckbox value="#{tableVisibilityAdminBean.allColumnsFilterable}" itemLabel="Filterable">
+                                                <p:ajax listener="#{tableVisibilityAdminBean.toggleAllColumnsFilterable()}" process="@this" update=":visUI:tableVisibilityForm:visTabs:columnRowsGrid"/>
+                                            </p:selectBooleanCheckbox>
+                                        </f:facet>
+                                        <p:selectBooleanCheckbox value="#{col.filterable}" disabled="#{not col.visible}"/>
+                                    </p:column>
+                                    <p:column style="width:110px;white-space:nowrap;">
+                                        <f:facet name="header">
+                                            <p:selectBooleanCheckbox value="#{tableVisibilityAdminBean.allColumnsSortable}" itemLabel="Sortable">
+                                                <p:ajax listener="#{tableVisibilityAdminBean.toggleAllColumnsSortable()}" process="@this" update=":visUI:tableVisibilityForm:visTabs:columnRowsGrid"/>
+                                            </p:selectBooleanCheckbox>
+                                        </f:facet>
+                                        <p:selectBooleanCheckbox value="#{col.sortable}" disabled="#{not col.visible}"/>
+                                    </p:column>
+                                </p:dataTable>
+                                <p style="color:#6b7280;font-size:0.8rem;">
+                                    Filterable/Sortable here are the defaults offered when a new dataset is first
+                                    built from this table - each dataset's own column configuration can still be
+                                    adjusted independently afterwards.
+                                </p>
+                                <p:commandButton value="Save Column Configuration" icon="fa fa-check"
+                                                 actionListener="#{tableVisibilityAdminBean.saveColumns()}"
+                                                 process="@form" update=":visUI:tableVisibilityForm:msgs"
+                                                 styleClass="green-btn MarginTop5"/>
+                            </div>
+                        </ui:fragment>
+                    </p:outputPanel>
+                </p:tab>
+
+                <p:tab title="Entity Display Names" rendered="#{tableVisibilityAdminBean.entitySourceAvailable}">
+                    <div class="card">
+                        <h3 style="margin-top:0;">Entity Display Names</h3>
+                        <p style="color:#6b7280;font-size:0.85rem;">
+                            Set a friendlier name for each approved entity - it's used wherever the entity
+                            is shown, such as the "Approved Entity" picker and the dataset list's Source column.
+                        </p>
+                        <p:dataTable id="entityDisplayGrid" value="#{tableVisibilityAdminBean.entityDisplayRows}" var="row"
+                                     emptyMessage="No approved entities registered.">
+                            <p:column headerText="Entity">
+                                <h:outputText value="#{row.defaultLabel}"/>
+                            </p:column>
+                            <p:column headerText="Display Name">
+                                <p:inputText value="#{row.displayName}" placeholder="#{row.defaultLabel}" style="width:100%;"/>
+                            </p:column>
+                        </p:dataTable>
+                        <p:commandButton value="Save Display Names" icon="fa fa-check"
+                                         actionListener="#{tableVisibilityAdminBean.saveEntityDisplayNames()}"
+                                         process="@form" update=":visUI:tableVisibilityForm:visTabs:entityDisplayGrid :visUI:tableVisibilityForm:msgs"
+                                         styleClass="green-btn MarginTop5"/>
+                    </div>
+                </p:tab>
+            </p:tabView>
+        </h:form>
+    </cc:implementation>
+</ui:component>

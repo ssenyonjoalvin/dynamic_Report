@@ -1,0 +1,419 @@
+<ui:component xmlns="http://www.w3.org/1999/xhtml"
+              xmlns:h="http://java.sun.com/jsf/html"
+              xmlns:f="http://java.sun.com/jsf/core"
+              xmlns:ui="http://java.sun.com/jsf/facelets"
+              xmlns:p="http://primefaces.org/ui"
+              xmlns:cc="http://java.sun.com/jsf/composite">
+
+    <!--
+        Report editor: one saved report's name, source, columns, filters,
+        sorting, calculated columns and preview. Open with ?reportId=... to
+        edit (add mode=run to land on the preview); without it, a new report.
+        Every AJAX target is a style-class selector, so the composite works
+        whatever id or naming container the host page puts it in.
+    -->
+    <cc:interface>
+        <cc:attribute name="listPage" default="SavedReports"
+                      shortDescription="Outcome of the saved reports list page, used by 'Back to saved reports'."/>
+    </cc:interface>
+
+    <cc:implementation>
+        <h:outputStylesheet library="reporting" name="reporting.css"/>
+        <h:form id="f">
+            <p:growl id="msgs" showDetail="true" life="4000"><p:autoUpdate/></p:growl>
+
+            <div class="rpt">
+                <div class="rpt-header">
+                    <div>
+                        <h2 class="rpt-title">#{reportEditorBean.existing ? 'Edit report' : 'New report'}</h2>
+                        <p class="rpt-subtitle">Choose a source, shape the query, preview results, then save it for users to run later.</p>
+                    </div>
+                    <div class="rpt-actions">
+                        <p:commandButton value="#{reportEditorBean.existing ? 'Update report' : 'Save report'}" icon="pi pi-save"
+                                         actionListener="#{reportEditorBean.save()}"
+                                         process="@form" update="@form"/>
+                        <p:button value="Back to saved reports" icon="pi pi-arrow-left" outcome="#{cc.attrs.listPage}"
+                                  styleClass="rpt-btn-outline-warn"/>
+                    </div>
+                </div>
+
+                <p:outputPanel styleClass="rpt-error-panel">
+                    <h:panelGroup rendered="#{not empty reportEditorBean.errorMessage}" layout="block" styleClass="rpt-error">
+                        <i class="pi pi-exclamation-triangle"/> #{reportEditorBean.errorMessage}
+                    </h:panelGroup>
+                </p:outputPanel>
+
+                <div class="rpt-body">
+                    <p:outputPanel styleClass="rpt-grid-fields rpt-head-fields" layout="block">
+                        <div>
+                            <p:outputLabel for="reportName" value="Report name" styleClass="rpt-label"/>
+                            <p:inputText id="reportName" value="#{reportEditorBean.editing.name}" styleClass="rpt-full"
+                                         placeholder="Give this report a name"/>
+                        </div>
+                        <div>
+                            <p:outputLabel for="reportSource" value="Report source" styleClass="rpt-label"/>
+                            <p:selectOneMenu id="reportSource" value="#{reportEditorBean.editing.sourceKey}" styleClass="rpt-full"
+                                             filter="true" filterMatchMode="contains" scrollHeight="320">
+                                <f:selectItem itemLabel="Choose a source" itemValue="#{null}" noSelectionOption="true"/>
+                                <f:selectItems value="#{reportEditorBean.sourceOptions}" var="s" itemValue="#{s.key}" itemLabel="#{s.label}"/>
+                                <p:ajax event="change" listener="#{reportEditorBean.sourceChanged()}"
+                                        process="@this reportName reportDescription" update="@form"/>
+                            </p:selectOneMenu>
+                            <div class="rpt-hint">
+                                <h:outputText value="#{reportEditorBean.selectedSource.description}" rendered="#{reportEditorBean.selectedSource != null}"/>
+                            </div>
+                        </div>
+                        <div>
+                            <p:outputLabel for="visibleColumns" value="Visible columns" styleClass="rpt-label"/>
+                            <p:outputPanel styleClass="rpt-colmenu" layout="block">
+                            <p:selectCheckboxMenu id="visibleColumns" value="#{reportEditorBean.visibleColumns}" label="Choose columns"
+                                                  filter="true" filterMatchMode="contains" scrollHeight="320" styleClass="rpt-full"
+                                                  disabled="#{reportEditorBean.editing.sourceKey == null}">
+                                <f:selectItems value="#{reportEditorBean.columnOptions}"/>
+                                <p:ajax event="change" process="@this" update="@(.rpt-colcount) @(.rpt-columns)"/>
+                                <p:ajax event="toggleSelect" process="@this" update="@(.rpt-colcount) @(.rpt-columns)"/>
+                            </p:selectCheckboxMenu>
+                            </p:outputPanel>
+                            <p:outputPanel styleClass="rpt-hint rpt-colcount" layout="block">
+                                #{reportEditorBean.visibleColumnCount} selected. Open the Columns tab to set display order.
+                            </p:outputPanel>
+                        </div>
+                        <div class="rpt-span-all">
+                            <p:outputLabel for="reportDescription" value="Description" styleClass="rpt-label"/>
+                            <p:inputTextarea id="reportDescription" value="#{reportEditorBean.editing.description}" rows="2"
+                                             autoResize="false" styleClass="rpt-full" placeholder="Optional note about what this report is for"/>
+                        </div>
+                    </p:outputPanel>
+                </div>
+
+                <p:tabView id="tabs" activeIndex="#{reportEditorBean.activeTabIndex}" styleClass="rpt-tabs">
+                    <p:ajax event="tabChange" listener="#{reportEditorBean.onTabChange}" process="@form"
+                            update="@(.rpt-preview) @(.rpt-error-panel)"/>
+
+                    <!-- ================================================= QUERY -->
+                    <p:tab title="Query">
+                        <div class="rpt-section">
+                            <div class="rpt-section-head">
+                                <div>
+                                    <h3 class="rpt-section-title">Filters</h3>
+                                    <div class="rpt-hint">
+                                        Combine conditions with AND or OR (AND is applied before OR, so
+                                        "A OR B AND C" means "A, or both B and C"). Choice and record fields
+                                        allow multiple values; date fields use calendars, with an age option
+                                        for dates of birth.
+                                    </div>
+                                </div>
+                                <p:commandButton value="Add filter" icon="pi pi-plus" styleClass="rpt-btn-outline"
+                                                 actionListener="#{reportEditorBean.addFilter()}"
+                                                 disabled="#{reportEditorBean.editing.sourceKey == null}"
+                                                 process="@form" update="@(.rpt-filters)"/>
+                            </div>
+
+                            <p:outputPanel styleClass="rpt-filters" layout="block">
+                                <p:dataTable value="#{reportEditorBean.editing.filters}" var="filter" rowIndexVar="i"
+                                             styleClass="rpt-table"
+                                             emptyMessage="#{reportEditorBean.editing.sourceKey == null ? 'Choose a report source to add filters.' : 'No filters - the report returns every record.'}">
+                                    <p:column headerText="Match" styleClass="rpt-col-match">
+                                        <h:outputText value="Where" styleClass="rpt-where" rendered="#{i == 0}"/>
+                                        <p:selectOneMenu value="#{filter.connector}" rendered="#{i > 0}">
+                                            <f:selectItems value="#{reportEditorBean.connectors}" var="c" itemValue="#{c}" itemLabel="#{c}"/>
+                                        </p:selectOneMenu>
+                                    </p:column>
+
+                                    <p:column headerText="Field">
+                                        <p:selectOneMenu value="#{filter.fieldName}" filter="true" filterMatchMode="contains" scrollHeight="300">
+                                            <f:selectItems value="#{reportEditorBean.filterFieldOptions}"/>
+                                            <p:ajax event="change" listener="#{reportEditorBean.filterFieldChanged(filter)}"
+                                                    process="@form" update="@(.rpt-filters)"/>
+                                        </p:selectOneMenu>
+                                    </p:column>
+
+                                    <p:column headerText="Operator" styleClass="rpt-col-operator">
+                                        <p:selectOneMenu value="#{filter.operator}">
+                                            <f:selectItems value="#{reportEditorBean.operatorOptions(filter)}"/>
+                                            <p:ajax event="change" listener="#{reportEditorBean.filterOperatorChanged(filter)}"
+                                                    process="@form" update="@(.rpt-filters)"/>
+                                        </p:selectOneMenu>
+                                    </p:column>
+
+                                    <p:column headerText="Value">
+                                        <div class="rpt-value-stack">
+                                            <h:panelGroup rendered="#{reportEditorBean.isDateFilter(filter)}">
+                                                <p:selectOneButton value="#{filter.valueMode}">
+                                                    <f:selectItem itemLabel="Date" itemValue="DATE"/>
+                                                    <f:selectItem itemLabel="Age" itemValue="AGE"/>
+                                                    <p:ajax event="change" listener="#{reportEditorBean.filterModeChanged(filter)}"
+                                                            process="@form" update="@(.rpt-filters)"/>
+                                                </p:selectOneButton>
+                                            </h:panelGroup>
+
+                                            <h:outputText value="—" styleClass="rpt-muted" rendered="#{reportEditorBean.valueEditor(filter) == 'NONE'}"/>
+
+                                            <p:selectCheckboxMenu value="#{filter.values}" rendered="#{reportEditorBean.valueEditor(filter) == 'MULTI'}"
+                                                                  label="Choose values" emptyLabel="Choose values" updateLabel="true"
+                                                                  filter="true" filterMatchMode="contains" scrollHeight="280">
+                                                <f:selectItems value="#{reportEditorBean.valueOptions(filter)}"/>
+                                            </p:selectCheckboxMenu>
+
+                                            <p:chips value="#{filter.values}" rendered="#{reportEditorBean.valueEditor(filter) == 'CHIPS'}"
+                                                     placeholder="Type a value and press Enter"/>
+
+                                            <p:inputText value="#{filter.value}" rendered="#{reportEditorBean.valueEditor(filter) == 'TEXT'}"/>
+
+                                            <p:inputText value="#{filter.value}" type="number" rendered="#{reportEditorBean.valueEditor(filter) == 'NUMBER'}"/>
+                                            <h:panelGroup styleClass="rpt-range" layout="block" rendered="#{reportEditorBean.valueEditor(filter) == 'NUMBER_RANGE'}">
+                                                <p:inputText value="#{filter.value}" type="number" placeholder="From"/>
+                                                <span class="rpt-range-sep">and</span>
+                                                <p:inputText value="#{filter.value2}" type="number" placeholder="To"/>
+                                            </h:panelGroup>
+
+                                            <p:calendar value="#{filter.filterDateValue}" pattern="dd/MM/yyyy" navigator="true"
+                                                        yearRange="c-100:c+10" rendered="#{reportEditorBean.valueEditor(filter) == 'DATE'}" styleClass="rpt-full"
+                                                        inputStyleClass="rpt-full" placeholder="dd/mm/yyyy"/>
+                                            <h:panelGroup styleClass="rpt-range" layout="block" rendered="#{reportEditorBean.valueEditor(filter) == 'DATE_RANGE'}">
+                                                <p:calendar value="#{filter.filterDateValue}" pattern="dd/MM/yyyy" navigator="true"
+                                                            yearRange="c-100:c+10" inputStyleClass="rpt-full" placeholder="From"/>
+                                                <span class="rpt-range-sep">and</span>
+                                                <p:calendar value="#{filter.filterDateValue2}" pattern="dd/MM/yyyy" navigator="true"
+                                                            yearRange="c-100:c+10" inputStyleClass="rpt-full" placeholder="To"/>
+                                            </h:panelGroup>
+
+                                            <p:inputText value="#{filter.value}" type="number" placeholder="Years"
+                                                         rendered="#{reportEditorBean.valueEditor(filter) == 'AGE'}"/>
+                                            <h:panelGroup styleClass="rpt-range" layout="block" rendered="#{reportEditorBean.valueEditor(filter) == 'AGE_RANGE'}">
+                                                <p:inputText value="#{filter.value}" type="number" placeholder="From (years)"/>
+                                                <span class="rpt-range-sep">and</span>
+                                                <p:inputText value="#{filter.value2}" type="number" placeholder="To (years)"/>
+                                            </h:panelGroup>
+                                        </div>
+                                    </p:column>
+
+                                    <p:column styleClass="rpt-col-icon">
+                                        <p:commandButton icon="pi pi-trash" title="Remove filter" styleClass="rpt-icon-btn rpt-danger"
+                                                         actionListener="#{reportEditorBean.removeFilter(filter)}"
+                                                         process="@form" update="@(.rpt-filters)"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:outputPanel>
+                        </div>
+
+                        <div class="rpt-section">
+                            <div class="rpt-section-head">
+                                <div>
+                                    <h3 class="rpt-section-title">Sorting</h3>
+                                    <div class="rpt-hint">Sort rows before they appear in the final report. The first sort wins; later ones break ties.</div>
+                                </div>
+                                <p:commandButton value="Add sort" icon="pi pi-plus" styleClass="rpt-btn-outline"
+                                                 actionListener="#{reportEditorBean.addSort()}"
+                                                 disabled="#{reportEditorBean.editing.sourceKey == null}"
+                                                 process="@form" update="@(.rpt-sorts)"/>
+                            </div>
+
+                            <p:outputPanel styleClass="rpt-sorts" layout="block">
+                                <p:dataTable value="#{reportEditorBean.editing.sort}" var="sort" rowIndexVar="i" styleClass="rpt-table"
+                                             emptyMessage="No sorting - records come back in the database's own order.">
+                                    <p:column headerText="Field">
+                                        <p:selectOneMenu value="#{sort.fieldName}" filter="true" filterMatchMode="contains" scrollHeight="300">
+                                            <f:selectItems value="#{reportEditorBean.sortFieldOptions}"/>
+                                        </p:selectOneMenu>
+                                    </p:column>
+                                    <p:column headerText="Direction" style="width:180px;">
+                                        <p:selectOneMenu value="#{sort.direction}">
+                                            <f:selectItem itemLabel="Ascending" itemValue="ASC"/>
+                                            <f:selectItem itemLabel="Descending" itemValue="DESC"/>
+                                        </p:selectOneMenu>
+                                    </p:column>
+                                    <p:column styleClass="rpt-col-icon">
+                                        <p:commandButton icon="pi pi-arrow-up" title="Sort by this first" styleClass="rpt-icon-btn"
+                                                         rendered="#{i > 0}"
+                                                         actionListener="#{reportEditorBean.moveSortUp(sort)}"
+                                                         process="@form" update="@(.rpt-sorts)"/>
+                                    </p:column>
+                                    <p:column styleClass="rpt-col-icon">
+                                        <p:commandButton icon="pi pi-trash" title="Remove sort" styleClass="rpt-icon-btn rpt-danger"
+                                                         actionListener="#{reportEditorBean.removeSort(sort)}"
+                                                         process="@form" update="@(.rpt-sorts)"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:outputPanel>
+                        </div>
+                    </p:tab>
+
+                    <!-- =============================================== COLUMNS -->
+                    <p:tab title="Columns">
+                        <div class="rpt-section">
+                            <div class="rpt-section-head">
+                                <div>
+                                    <h3 class="rpt-section-title">Column order and headers</h3>
+                                    <div class="rpt-hint">
+                                        Drag a row by its handle (or use the arrows) to set the left-to-right order.
+                                        A custom header replaces the column's name in the preview and the export.
+                                    </div>
+                                </div>
+                            </div>
+                            <p:outputPanel styleClass="rpt-columns" layout="block">
+                                <p:dataTable value="#{reportEditorBean.editing.selectedColumns}" var="key" rowIndexVar="i"
+                                             draggableRows="true" styleClass="rpt-table"
+                                             emptyMessage="No columns yet - tick some under Visible columns above.">
+                                    <p:ajax event="rowReorder" listener="#{reportEditorBean.onColumnsReordered}"
+                                            process="@this" update="@(.rpt-columns)"/>
+                                    <p:column styleClass="rpt-col-icon">
+                                        <i class="pi pi-bars rpt-drag" title="Drag to reorder"/>
+                                    </p:column>
+                                    <p:column headerText="Column">
+                                        <h:outputText value="#{reportEditorBean.columnLabel(key)}"/>
+                                    </p:column>
+                                    <p:column headerText="Type" styleClass="rpt-col-narrow">
+                                        <span class="rpt-badge">#{reportEditorBean.columnTypeLabel(key)}</span>
+                                    </p:column>
+                                    <p:column headerText="Custom header">
+                                        <p:inputText value="#{reportEditorBean.editing.columnAliases[key]}"
+                                                     placeholder="#{reportEditorBean.columnLabel(key)}" styleClass="rpt-full">
+                                            <p:ajax event="change" process="@this"/>
+                                        </p:inputText>
+                                    </p:column>
+                                    <p:column styleClass="rpt-col-icon">
+                                        <p:commandButton icon="pi pi-arrow-up" title="Move left" styleClass="rpt-icon-btn"
+                                                         rendered="#{i > 0}"
+                                                         actionListener="#{reportEditorBean.moveColumnUp(key)}"
+                                                         process="@this" update="@(.rpt-columns)"/>
+                                    </p:column>
+                                    <p:column styleClass="rpt-col-icon">
+                                        <p:commandButton icon="pi pi-arrow-down" title="Move right" styleClass="rpt-icon-btn"
+                                                         rendered="#{i lt reportEditorBean.visibleColumnCount - 1}"
+                                                         actionListener="#{reportEditorBean.moveColumnDown(key)}"
+                                                         process="@this" update="@(.rpt-columns)"/>
+                                    </p:column>
+                                    <p:column styleClass="rpt-col-icon">
+                                        <p:commandButton icon="pi pi-eye-slash" title="Hide column" styleClass="rpt-icon-btn rpt-danger"
+                                                         actionListener="#{reportEditorBean.hideColumn(key)}"
+                                                         process="@this" update="@(.rpt-columns) @(.rpt-colmenu) @(.rpt-colcount)"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:outputPanel>
+                        </div>
+
+                        <div class="rpt-section">
+                            <div class="rpt-section-head">
+                                <div>
+                                    <h3 class="rpt-section-title">Calculated columns</h3>
+                                    <div class="rpt-hint">
+                                        Work out a new column from two others on each row - add, subtract, multiply,
+                                        divide, percentages, averages, days between dates and more. B can be a fixed
+                                        number, and a calculation can use an earlier calculated column, so
+                                        "(A + B) × C" is two steps.
+                                    </div>
+                                </div>
+                                <p:commandButton value="Add calculated column" icon="pi pi-plus" styleClass="rpt-btn-outline"
+                                                 actionListener="#{reportEditorBean.addComputedColumn()}"
+                                                 disabled="#{reportEditorBean.editing.sourceKey == null}"
+                                                 process="@form" update="@(.rpt-calcs) @(.rpt-columns) @(.rpt-colmenu) @(.rpt-colcount)"/>
+                            </div>
+                            <p:outputPanel styleClass="rpt-calcs" layout="block">
+                                <p:dataTable value="#{reportEditorBean.editing.computedColumns}" var="calc" styleClass="rpt-table"
+                                             emptyMessage="No calculated columns.">
+                                    <p:column headerText="Name">
+                                        <p:inputText value="#{calc.label}" styleClass="rpt-full">
+                                            <p:ajax event="change" process="@this" update="@(.rpt-columns)"/>
+                                        </p:inputText>
+                                    </p:column>
+                                    <p:column headerText="A">
+                                        <p:selectOneMenu value="#{calc.leftOperand}" filter="true" filterMatchMode="contains" scrollHeight="300">
+                                            <f:selectItem itemLabel="Choose a column" itemValue="#{null}" noSelectionOption="true"/>
+                                            <f:selectItems value="#{reportEditorBean.operandOptions(calc, false)}"/>
+                                        </p:selectOneMenu>
+                                    </p:column>
+                                    <p:column headerText="Calculation" style="width:230px;">
+                                        <p:selectOneMenu value="#{calc.operation}">
+                                            <f:selectItems value="#{reportEditorBean.computedOperations}" var="op" itemValue="#{op}" itemLabel="#{op.label}"/>
+                                        </p:selectOneMenu>
+                                    </p:column>
+                                    <p:column headerText="B">
+                                        <div class="rpt-value-stack">
+                                            <p:selectOneMenu value="#{calc.rightChoice}" filter="true" filterMatchMode="contains" scrollHeight="300">
+                                                <f:selectItem itemLabel="Choose a column" itemValue="#{null}" noSelectionOption="true"/>
+                                                <f:selectItems value="#{reportEditorBean.operandOptions(calc, true)}"/>
+                                                <p:ajax event="change" process="@form" update="@(.rpt-calcs)"/>
+                                            </p:selectOneMenu>
+                                            <p:inputNumber value="#{calc.rightConstant}" decimalPlaces="4" rendered="#{calc.rightIsConstant}"
+                                                           placeholder="Number"/>
+                                        </div>
+                                    </p:column>
+                                    <p:column headerText="Decimals" styleClass="rpt-col-narrow">
+                                        <p:spinner value="#{calc.decimalPlaces}" min="0" max="10" size="3"/>
+                                    </p:column>
+                                    <p:column styleClass="rpt-col-icon">
+                                        <p:commandButton icon="pi pi-trash" title="Remove calculated column" styleClass="rpt-icon-btn rpt-danger"
+                                                         actionListener="#{reportEditorBean.removeComputedColumn(calc)}"
+                                                         process="@form" update="@(.rpt-calcs) @(.rpt-columns) @(.rpt-colmenu) @(.rpt-colcount)"/>
+                                    </p:column>
+                                </p:dataTable>
+                            </p:outputPanel>
+                        </div>
+                    </p:tab>
+
+                    <!-- =============================================== PREVIEW -->
+                    <p:tab title="Preview">
+                        <div class="rpt-actions">
+                            <p:commandButton value="Run preview" icon="pi pi-play"
+                                             actionListener="#{reportEditorBean.preview()}"
+                                             process="@form" update="@(.rpt-preview) @(.rpt-error-panel)"/>
+                            <p:commandButton value="Export CSV" icon="pi pi-download" ajax="false" styleClass="rpt-btn-outline"
+                                             actionListener="#{reportEditorBean.exportCsv()}">
+                                <p:fileDownload value="#{reportEditorBean.csvExport}"/>
+                            </p:commandButton>
+                        </div>
+
+                        <p:outputPanel styleClass="rpt-preview" layout="block">
+                            <h:panelGroup layout="block" styleClass="rpt-empty" rendered="#{reportEditorBean.previewResult == null}">
+                                Run the preview to see the first rows of this report.
+                            </h:panelGroup>
+                            <h:panelGroup rendered="#{reportEditorBean.previewResult != null}">
+                                <div class="rpt-preview-meta">
+                                    <span>
+                                        Showing <strong>#{reportEditorBean.previewFrom}–#{reportEditorBean.previewTo}</strong>
+                                        of <strong>#{reportEditorBean.previewResult.totalCount}</strong> record(s)
+                                    </span>
+                                    <span class="rpt-actions">
+                                        <p:commandButton icon="pi pi-chevron-left" title="Previous page" styleClass="rpt-icon-btn"
+                                                         actionListener="#{reportEditorBean.previousPage()}"
+                                                         disabled="#{!reportEditorBean.hasPreviousPage}"
+                                                         process="@this" update="@(.rpt-preview) @(.rpt-error-panel)"/>
+                                        <span>Page #{reportEditorBean.previewPage}</span>
+                                        <p:commandButton icon="pi pi-chevron-right" title="Next page" styleClass="rpt-icon-btn"
+                                                         actionListener="#{reportEditorBean.nextPage()}"
+                                                         disabled="#{!reportEditorBean.hasNextPage}"
+                                                         process="@this" update="@(.rpt-preview) @(.rpt-error-panel)"/>
+                                    </span>
+                                </div>
+                                <h:panelGroup layout="block" styleClass="rpt-empty" rendered="#{empty reportEditorBean.previewResult.rows}">
+                                    No records match these filters.
+                                </h:panelGroup>
+                                <h:panelGroup layout="block" styleClass="rpt-preview-scroll" rendered="#{not empty reportEditorBean.previewResult.rows}">
+                                    <table class="rpt-preview-table">
+                                        <thead>
+                                            <tr>
+                                                <ui:repeat value="#{reportEditorBean.previewResult.columnKeys}" var="key">
+                                                    <th>#{reportEditorBean.previewResult.columnLabels[key]}</th>
+                                                </ui:repeat>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <ui:repeat value="#{reportEditorBean.previewResult.rows}" var="row">
+                                                <tr>
+                                                    <ui:repeat value="#{reportEditorBean.previewResult.columnKeys}" var="key">
+                                                        <td>#{row[key]}</td>
+                                                    </ui:repeat>
+                                                </tr>
+                                            </ui:repeat>
+                                        </tbody>
+                                    </table>
+                                </h:panelGroup>
+                            </h:panelGroup>
+                        </p:outputPanel>
+                    </p:tab>
+                </p:tabView>
+            </div>
+        </h:form>
+    </cc:implementation>
+</ui:component>

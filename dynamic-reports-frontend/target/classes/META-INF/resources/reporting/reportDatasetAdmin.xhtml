@@ -1,0 +1,188 @@
+<ui:component xmlns="http://www.w3.org/1999/xhtml"
+              xmlns:h="http://java.sun.com/jsf/html"
+              xmlns:f="http://java.sun.com/jsf/core"
+              xmlns:ui="http://java.sun.com/jsf/facelets"
+              xmlns:p="http://primefaces.org/ui"
+              xmlns:cc="http://java.sun.com/jsf/composite">
+
+    <cc:interface/>
+
+    <cc:implementation>
+        <ui:fragment rendered="#{not reportingAccessBean.administrator}">
+            <div style="padding:16px;color:#991b1b;">You do not have permission to view this page.</div>
+        </ui:fragment>
+        <h:form id="reportDatasetAdminForm" rendered="#{reportingAccessBean.administrator}">
+            <p:growl id="msgs" showSummary="true" severity="info,warn,error"/>
+
+            <div class="card">
+                <div style="display:flex;align-items:center;margin-bottom:8px;">
+                    <h3 style="margin:0;">Report Datasets</h3>
+                    <p:commandButton value="New Dataset" icon="fa fa-plus"
+                                     actionListener="#{reportDatasetAdminBean.newDataset()}"
+                                     process="@this" update=":rptAdminUI:reportDatasetAdminForm:editPanel"
+                                     styleClass="green-btn MarginLeft5"/>
+                </div>
+                <p:dataTable value="#{reportDatasetAdminBean.datasets}" var="dataset"
+                             emptyMessage="No datasets configured yet - click New Dataset to create one.">
+                    <p:column headerText="Name">
+                        <h:outputText value="#{dataset.name}"/>
+                    </p:column>
+                    <p:column headerText="Source">
+                        <h:outputText value="#{reportDatasetAdminBean.sourceLabel(dataset)}"/>
+                    </p:column>
+                    <p:column headerText="Enabled">
+                        <h:outputText value="#{dataset.enabled ? 'Yes' : 'No'}"/>
+                    </p:column>
+                    <p:column style="width:160px;">
+                        <p:commandButton value="Edit" icon="fa fa-pencil"
+                                         actionListener="#{reportDatasetAdminBean.edit(dataset)}"
+                                         process="@this" update=":rptAdminUI:reportDatasetAdminForm:editPanel"
+                                         styleClass="blue-btn MarginLeft5"/>
+                        <p:commandButton icon="fa fa-trash" title="Delete"
+                                         actionListener="#{reportDatasetAdminBean.delete(dataset)}"
+                                         process="@this" update=":rptAdminUI:reportDatasetAdminForm"
+                                         styleClass="red-btn MarginLeft5">
+                            <p:confirm header="Confirmation" message="Delete this dataset? This cannot be undone."/>
+                        </p:commandButton>
+                    </p:column>
+                </p:dataTable>
+            </div>
+
+            <p:outputPanel id="editPanel">
+                <ui:fragment rendered="#{reportDatasetAdminBean.editing != null}">
+                    <div class="card MarginTop5">
+                        <h3 style="margin-top:0;">Dataset Configuration</h3>
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+                            <div style="flex:1;min-width:220px;">
+                                <p:outputLabel value="Name" style="font-weight:600;display:block;"/>
+                                <p:inputText value="#{reportDatasetAdminBean.editing.name}" style="width:100%;" required="true"/>
+                            </div>
+                            <div style="flex:1;min-width:220px;">
+                                <p:outputLabel value="Source Type" style="font-weight:600;display:block;"/>
+                                <p:selectOneMenu value="#{reportDatasetAdminBean.sourceType}" style="width:100%;">
+                                    <f:selectItem itemLabel="Approved Entity" itemValue="ENTITY" rendered="#{reportDatasetAdminBean.entitySourceAvailable}"/>
+                                    <f:selectItem itemLabel="Database Table" itemValue="TABLE"/>
+                                    <p:ajax event="change" listener="#{reportDatasetAdminBean.onSourceTypeChanged()}"
+                                            update=":rptAdminUI:reportDatasetAdminForm:sourcePanel :rptAdminUI:reportDatasetAdminForm:columnsPanel"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div style="flex:0;">
+                                <p:outputLabel value="Enabled" style="font-weight:600;display:block;"/>
+                                <p:selectBooleanCheckbox value="#{reportDatasetAdminBean.editing.enabled}"/>
+                            </div>
+                        </div>
+
+                        <p:outputPanel id="sourcePanel">
+                            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+                                <div style="flex:1;min-width:220px;" rendered="#{reportDatasetAdminBean.entitySource}">
+                                    <p:outputLabel value="Approved Entity" style="font-weight:600;display:block;"/>
+                                    <p:selectOneMenu value="#{reportDatasetAdminBean.selectedEntityClassName}" style="width:100%;">
+                                        <f:selectItem itemLabel="Select entity" itemValue=""/>
+                                        <f:selectItems value="#{reportDatasetAdminBean.approvedEntityClassNames}" var="c"
+                                                       itemValue="#{c}" itemLabel="#{reportDatasetAdminBean.entityLabel(c)}"/>
+                                        <p:ajax event="change" listener="#{reportDatasetAdminBean.onEntitySelected()}"
+                                                update=":rptAdminUI:reportDatasetAdminForm:columnsPanel"/>
+                                    </p:selectOneMenu>
+                                </div>
+                                <div style="flex:1;min-width:220px;" rendered="#{reportDatasetAdminBean.tableSource}">
+                                    <p:outputLabel value="Database Table" style="font-weight:600;display:block;"/>
+                                    <p:selectOneMenu value="#{reportDatasetAdminBean.selectedTableName}" filter="true"
+                                                     filterMatchMode="contains" style="width:100%;">
+                                        <f:selectItem itemLabel="Select table" itemValue=""/>
+                                        <f:selectItems value="#{reportDatasetAdminBean.availableTables}" var="t"
+                                                       itemValue="#{t}" itemLabel="#{reportDatasetAdminBean.tableLabel(t)}"/>
+                                        <p:ajax event="change" listener="#{reportDatasetAdminBean.onTableSelected()}"
+                                                update=":rptAdminUI:reportDatasetAdminForm:columnsPanel"/>
+                                    </p:selectOneMenu>
+                                </div>
+                            </div>
+                        </p:outputPanel>
+
+                        <p:outputLabel value="Description" style="font-weight:600;display:block;"/>
+                        <p:inputTextarea value="#{reportDatasetAdminBean.editing.description}" rows="2" style="width:100%;box-sizing:border-box;"/>
+
+                        <p:outputPanel id="columnsPanel" style="margin-top:12px;">
+                            <h4>Columns</h4>
+                            <p style="color:#6b7280;font-size:0.8rem;">
+                                A field marked "Refers To" points at another entity/table. Enable its Lookup,
+                                pick which existing dataset built from that target to use, and which of the
+                                target's own fields to display (e.g. "name") - report users then see that
+                                display value instead of a raw, meaningless foreign key.
+                            </p>
+                            <p:dataTable id="columnRowsGrid" value="#{reportDatasetAdminBean.columnRows}" var="row"
+                                         emptyMessage="Select an entity or table above to discover its fields.">
+                                <p:column headerText="Field"><h:outputText value="#{row.fieldName}"/></p:column>
+                                <p:column headerText="Label"><p:inputText value="#{row.label}"/></p:column>
+                                <p:column headerText="Field Type"><h:outputText value="#{reportDatasetAdminBean.fieldTypeLabel(row.fieldType)}" rendered="#{not empty row.fieldType}"/></p:column>
+                                <p:column style="width:130px;white-space:nowrap;">
+                                    <f:facet name="header">
+                                        <p:selectBooleanCheckbox value="#{reportDatasetAdminBean.allSelectable}" itemLabel="Selectable">
+                                            <p:ajax listener="#{reportDatasetAdminBean.toggleAllSelectable()}" process="@this" update=":rptAdminUI:reportDatasetAdminForm:columnRowsGrid"/>
+                                        </p:selectBooleanCheckbox>
+                                    </f:facet>
+                                    <p:selectBooleanCheckbox value="#{row.selectable}">
+                                        <p:ajax listener="#{reportDatasetAdminBean.onSelectableToggled(row)}" process="@this" update=":rptAdminUI:reportDatasetAdminForm:columnRowsGrid"/>
+                                    </p:selectBooleanCheckbox>
+                                </p:column>
+                                <p:column style="width:120px;white-space:nowrap;">
+                                    <f:facet name="header">
+                                        <p:selectBooleanCheckbox value="#{reportDatasetAdminBean.allFilterable}" itemLabel="Filterable">
+                                            <p:ajax listener="#{reportDatasetAdminBean.toggleAllFilterable()}" process="@this" update=":rptAdminUI:reportDatasetAdminForm:columnRowsGrid"/>
+                                        </p:selectBooleanCheckbox>
+                                    </f:facet>
+                                    <p:selectBooleanCheckbox value="#{row.filterable}" disabled="#{not row.selectable}"/>
+                                </p:column>
+                                <p:column style="width:110px;white-space:nowrap;">
+                                    <f:facet name="header">
+                                        <p:selectBooleanCheckbox value="#{reportDatasetAdminBean.allSortable}" itemLabel="Sortable">
+                                            <p:ajax listener="#{reportDatasetAdminBean.toggleAllSortable()}" process="@this" update=":rptAdminUI:reportDatasetAdminForm:columnRowsGrid"/>
+                                        </p:selectBooleanCheckbox>
+                                    </f:facet>
+                                    <p:selectBooleanCheckbox value="#{row.sortable}" disabled="#{not row.selectable}"/>
+                                </p:column>
+                                <p:column headerText="Order"><p:inputNumber value="#{row.displayOrder}" style="width:70px;"/></p:column>
+                                <p:column headerText="Refers To">
+                                    <h:outputText value="#{row.referencedLabel}" rendered="#{row.relationship}"/>
+                                </p:column>
+                                <p:column style="width:100px;white-space:nowrap;">
+                                    <f:facet name="header">
+                                        <p:selectBooleanCheckbox value="#{reportDatasetAdminBean.allLookupEnabled}" itemLabel="Lookup">
+                                            <p:ajax listener="#{reportDatasetAdminBean.toggleAllLookupEnabled()}" process="@this" update=":rptAdminUI:reportDatasetAdminForm:columnRowsGrid"/>
+                                        </p:selectBooleanCheckbox>
+                                    </f:facet>
+                                    <p:selectBooleanCheckbox value="#{row.lookupEnabled}" rendered="#{row.relationship}">
+                                        <p:ajax process="@form" update=":rptAdminUI:reportDatasetAdminForm:columnsPanel"/>
+                                    </p:selectBooleanCheckbox>
+                                </p:column>
+                                <p:column headerText="Target Dataset">
+                                    <p:selectOneMenu value="#{row.lookupTargetDatasetId}" style="width:100%;"
+                                                      rendered="#{row.relationship and row.lookupEnabled}">
+                                        <f:selectItem itemLabel="Select dataset" itemValue=""/>
+                                        <f:selectItems value="#{row.lookupCandidates}" var="d" itemValue="#{d.id}" itemLabel="#{d.name}"/>
+                                    </p:selectOneMenu>
+                                    <h:outputText value="No dataset built from this target yet"
+                                                   style="color:#9ca3af;font-size:0.8rem;"
+                                                   rendered="#{row.relationship and row.lookupEnabled and empty row.lookupCandidates}"/>
+                                </p:column>
+                                <p:column headerText="Display Field">
+                                    <p:inputText value="#{row.lookupDisplayField}" placeholder="e.g. name"
+                                                  rendered="#{row.relationship and row.lookupEnabled}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </p:outputPanel>
+
+                        <p:commandButton value="Save Dataset" icon="fa fa-check"
+                                         actionListener="#{reportDatasetAdminBean.save()}"
+                                         process="@form" update=":rptAdminUI:reportDatasetAdminForm"
+                                         styleClass="green-btn MarginTop5"/>
+                    </div>
+                </ui:fragment>
+            </p:outputPanel>
+
+            <p:confirmDialog global="true">
+                <p:commandButton value="Yes" type="button" styleClass="ui-confirmdialog-yes"/>
+                <p:commandButton value="No" type="button" styleClass="ui-confirmdialog-no"/>
+            </p:confirmDialog>
+        </h:form>
+    </cc:implementation>
+</ui:component>

@@ -1,0 +1,99 @@
+<ui:component xmlns="http://www.w3.org/1999/xhtml"
+              xmlns:h="http://java.sun.com/jsf/html"
+              xmlns:f="http://java.sun.com/jsf/core"
+              xmlns:ui="http://java.sun.com/jsf/facelets"
+              xmlns:p="http://primefaces.org/ui"
+              xmlns:cc="http://java.sun.com/jsf/composite">
+
+    <!-- Admin switchboard for the report sources registered by the host project's ReportSourceRegistry. -->
+    <cc:interface/>
+
+    <cc:implementation>
+        <h:outputStylesheet library="reporting" name="reporting.css"/>
+        <h:panelGroup layout="block" styleClass="rpt rpt-body" rendered="#{!reportingAccessBean.administrator}">
+            You need administrative privileges to manage report sources.
+        </h:panelGroup>
+
+        <h:form id="f" rendered="#{reportingAccessBean.administrator}">
+            <p:growl id="msgs" showDetail="true" life="4000"><p:autoUpdate/></p:growl>
+
+            <div class="rpt">
+                <div class="rpt-header">
+                    <div>
+                        <h2 class="rpt-title">Report sources</h2>
+                        <p class="rpt-subtitle">
+                            Only available sources appear when someone creates a dynamic report.
+                            Sources already used by a saved report remain available on that report.
+                        </p>
+                    </div>
+                    <p:outputPanel styleClass="rpt-status rpt-src-status">
+                        <i class="pi pi-check-circle"/>
+                        #{reportSourcesAdminBean.availableCount} of #{reportSourcesAdminBean.totalCount} available
+                    </p:outputPanel>
+                </div>
+
+                <div class="rpt-toolbar">
+                    <div>
+                        <p:outputLabel for="search" value="Search" styleClass="rpt-label"/>
+                        <span class="rpt-search">
+                            <i class="pi pi-search"/>
+                            <p:inputText id="search" value="#{reportSourcesAdminBean.search}" placeholder="Search report sources">
+                                <p:ajax event="keyup" delay="300" listener="#{reportSourcesAdminBean.applyFilter()}"
+                                        process="@this" update="@(.rpt-src-list)"/>
+                            </p:inputText>
+                        </span>
+                    </div>
+                    <div>
+                        <p:outputLabel for="show" value="Show" styleClass="rpt-label"/>
+                        <p:selectOneButton id="show" value="#{reportSourcesAdminBean.show}">
+                            <f:selectItem itemLabel="All" itemValue="ALL"/>
+                            <f:selectItem itemLabel="Available" itemValue="AVAILABLE"/>
+                            <f:selectItem itemLabel="Unavailable" itemValue="UNAVAILABLE"/>
+                            <p:ajax event="change" listener="#{reportSourcesAdminBean.applyFilter()}"
+                                    process="@this" update="@(.rpt-src-list)"/>
+                        </p:selectOneButton>
+                    </div>
+                </div>
+
+                <p:outputPanel styleClass="rpt-body rpt-src-list" layout="block">
+                    <div class="rpt-count">#{reportSourcesAdminBean.visibleRows.size()} report source(s)</div>
+                    <p:dataTable value="#{reportSourcesAdminBean.visibleRows}" var="row" styleClass="rpt-table"
+                                 paginator="true" rows="10" rowsPerPageTemplate="10,25,50" paginatorAlwaysVisible="false"
+                                 paginatorTemplate="{FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                                 emptyMessage="No report sources match.">
+                        <p:column headerText="Report source" style="width:240px;">
+                            <strong>#{row.label}</strong>
+                        </p:column>
+                        <p:column headerText="What it includes">
+                            <span class="rpt-muted">#{row.description}</span>
+                        </p:column>
+                        <p:column headerText="Available in reports" style="width:170px;text-align:center;">
+                            <p:inputSwitch value="#{row.available}">
+                                <p:ajax event="change" process="@this" update="@(.rpt-footer) @(.rpt-src-status)"/>
+                            </p:inputSwitch>
+                        </p:column>
+                    </p:dataTable>
+                </p:outputPanel>
+
+                <p:outputPanel styleClass="rpt-footer" layout="block">
+                    <span class="rpt-footer-status #{reportSourcesAdminBean.changeCount > 0 ? 'rpt-dirty' : ''}">
+                        <i class="pi #{reportSourcesAdminBean.changeCount > 0 ? 'pi-pencil' : 'pi-check-circle'}"/>
+                        #{reportSourcesAdminBean.changeCount > 0
+                            ? reportSourcesAdminBean.changeCount.toString().concat(' unsaved change(s)')
+                            : 'No unsaved changes'}
+                    </span>
+                    <span class="rpt-actions">
+                        <p:commandButton value="Discard changes" icon="pi pi-replay" styleClass="rpt-btn-outline-warn"
+                                         disabled="#{reportSourcesAdminBean.changeCount == 0}"
+                                         actionListener="#{reportSourcesAdminBean.discard()}"
+                                         process="@this" update="@(.rpt-src-list) @(.rpt-footer) @(.rpt-src-status)"/>
+                        <p:commandButton value="Save changes" icon="pi pi-save"
+                                         disabled="#{reportSourcesAdminBean.changeCount == 0}"
+                                         actionListener="#{reportSourcesAdminBean.save()}"
+                                         process="@this" update="@(.rpt-src-list) @(.rpt-footer) @(.rpt-src-status)"/>
+                    </span>
+                </p:outputPanel>
+            </div>
+        </h:form>
+    </cc:implementation>
+</ui:component>
