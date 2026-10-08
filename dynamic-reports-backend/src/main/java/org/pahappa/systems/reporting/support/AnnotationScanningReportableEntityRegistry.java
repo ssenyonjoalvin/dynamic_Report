@@ -19,9 +19,10 @@ import java.util.Set;
  * becomes reportable, with zero per-entity maintenance as the domain model
  * grows.
  * <p>
- * A host project registers its own entities by subclassing this with its own
- * base package(s) and annotating the subclass {@code @Service} so it's picked
- * up by the host's component scan, e.g.:
+ * A host normally needs no subclass: listing its model package(s) under
+ * {@code dynamic.reports.model.packages} in {@code dynamic-reports.properties}
+ * (see {@link ReportingProperties}) makes the plugin scan them itself. A
+ * subclass is only needed for packages that must be added in code, e.g.:
  * <pre>
  * {@literal @}Service
  * public class MyProjectReportableEntityRegistry extends AnnotationScanningReportableEntityRegistry {

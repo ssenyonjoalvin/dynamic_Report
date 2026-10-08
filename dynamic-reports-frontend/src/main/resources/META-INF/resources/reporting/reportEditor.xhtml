@@ -255,8 +255,9 @@
                                 <p:dataTable value="#{reportEditorBean.editing.selectedColumns}" var="key" rowIndexVar="i"
                                              draggableRows="true" styleClass="rpt-table"
                                              emptyMessage="No columns yet - tick some under Visible columns above.">
-                                    <p:ajax event="rowReorder" listener="#{reportEditorBean.onColumnsReordered}"
-                                            process="@this" update="@(.rpt-columns)"/>
+                                    <!-- No listener: PrimeFaces itself moves the row in the bound list while decoding
+                                         the drop, so moving it again here would shift it a second time. -->
+                                    <p:ajax event="rowReorder" process="@this" update="@(.rpt-columns)"/>
                                     <p:column styleClass="rpt-col-icon">
                                         <i class="pi pi-bars rpt-drag" title="Drag to reorder"/>
                                     </p:column>
