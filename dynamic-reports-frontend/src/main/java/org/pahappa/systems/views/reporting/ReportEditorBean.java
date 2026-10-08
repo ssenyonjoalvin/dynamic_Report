@@ -19,7 +19,6 @@ import org.pahappa.systems.models.reporting.ReportFilter;
 import org.pahappa.systems.models.reporting.ReportSort;
 import org.pahappa.systems.models.reporting.SavedReport;
 import org.primefaces.component.tabview.TabView;
-import org.primefaces.event.ReorderEvent;
 import org.primefaces.event.TabChangeEvent;
 import org.primefaces.model.DefaultStreamedContent;
 import org.primefaces.model.StreamedContent;
@@ -266,10 +265,6 @@ public class ReportEditorBean implements Serializable {
 
     public int getVisibleColumnCount() {
         return this.editing.getSelectedColumns().size();
-    }
-
-    public void onColumnsReordered(ReorderEvent event) {
-        moveColumn(event.getFromIndex(), event.getToIndex());
     }
 
     public void moveColumnUp(String key) {
