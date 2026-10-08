@@ -9,6 +9,7 @@ import org.pahappa.systems.models.reporting.ReportSourceConfig;
 import org.pahappa.systems.models.reporting.SavedReport;
 import org.pahappa.systems.reporting.support.GenericServiceImpl;
 import org.pahappa.systems.reporting.support.ReportValues;
+import org.pahappa.systems.reporting.support.ReportingProperties;
 import org.sers.webutils.model.BaseEntity;
 import org.sers.webutils.model.RecordStatus;
 import org.sers.webutils.model.security.User;
@@ -103,8 +104,10 @@ public class ReportSourceServiceImpl extends GenericServiceImpl<ReportSourceConf
     /**
      * Every entity in the persistence unit's metamodel that extends
      * BaseEntity and is concrete, except framework (webutils) entities, this
-     * plugin's own tables and credential-like tables. Computed once: the set
-     * of mapped entities only changes on redeploy.
+     * plugin's own tables and credential-like tables. When the host lists its
+     * model packages in {@value ReportingProperties#FILE_NAME}, only entities
+     * under those packages qualify, so other plugins' entities stay out.
+     * Computed once: the set of mapped entities only changes on redeploy.
      */
     private List<ReportSourceDefinition> discoveredSources() {
         List<ReportSourceDefinition> cached = this.discovered;
@@ -118,7 +121,7 @@ public class ReportSourceServiceImpl extends GenericServiceImpl<ReportSourceConf
                 Class<?> type = entity.getJavaType();
                 if (type == null || !BaseEntity.class.isAssignableFrom(type) || Modifier.isAbstract(type.getModifiers())
                         || type.getName().startsWith("org.sers.webutils.") || type.getName().startsWith(ownPackage + ".")
-                        || isSensitive(type.getSimpleName())) {
+                        || !ReportingProperties.isInModelPackages(type) || isSensitive(type.getSimpleName())) {
                     continue;
                 }
                 String label = ReportValues.humanize(type.getSimpleName());

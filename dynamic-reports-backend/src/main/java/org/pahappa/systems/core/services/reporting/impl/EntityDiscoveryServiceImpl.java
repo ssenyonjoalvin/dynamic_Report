@@ -2,6 +2,8 @@ package org.pahappa.systems.core.services.reporting.impl;
 
 import org.pahappa.systems.core.services.reporting.EntityDiscoveryService;
 import org.pahappa.systems.core.services.reporting.ReportableEntityRegistry;
+import org.pahappa.systems.reporting.support.AnnotationScanningReportableEntityRegistry;
+import org.pahappa.systems.reporting.support.ReportingProperties;
 import org.sers.webutils.model.BaseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -29,9 +32,13 @@ public class EntityDiscoveryServiceImpl implements EntityDiscoveryService {
     @Autowired(required = false)
     private List<ReportableEntityRegistry> registries;
 
+    /** Scans the model packages the host lists in dynamic-reports.properties (none listed: contributes nothing). */
+    private volatile ReportableEntityRegistry configuredRegistry;
+
     @Override
     public List<Class<?>> approvedEntityClasses() {
-        List<Class<?>> approved = new ArrayList<Class<?>>();
+        Set<Class<?>> approved = new LinkedHashSet<Class<?>>();
+        approved.addAll(configuredRegistry().approvedEntityClasses());
         if (this.registries != null) {
             for (ReportableEntityRegistry registry : this.registries) {
                 List<Class<?>> contributed = registry.approvedEntityClasses();
@@ -40,7 +47,17 @@ public class EntityDiscoveryServiceImpl implements EntityDiscoveryService {
                 }
             }
         }
-        return approved;
+        return new ArrayList<Class<?>>(approved);
+    }
+
+    private ReportableEntityRegistry configuredRegistry() {
+        ReportableEntityRegistry registry = this.configuredRegistry;
+        if (registry == null) {
+            List<String> packages = ReportingProperties.modelPackages();
+            registry = new AnnotationScanningReportableEntityRegistry(packages.toArray(new String[packages.size()]));
+            this.configuredRegistry = registry;
+        }
+        return registry;
     }
 
     @Override

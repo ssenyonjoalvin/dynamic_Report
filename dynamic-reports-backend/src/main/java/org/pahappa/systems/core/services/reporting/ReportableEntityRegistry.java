@@ -3,11 +3,11 @@ package org.pahappa.systems.core.services.reporting;
 import java.util.List;
 
 /**
- * Extension point that lets a host project register its own JPA entity
- * classes as reportable via "Approved Entity" datasets. The reporting module
- * ships no entities of its own - it aggregates whatever Spring beans of this
- * type the host application registers, and reports nothing if none are
- * registered (table-based datasets are unaffected).
+ * Optional extension point that lets a host project register JPA entity
+ * classes as reportable via "Approved Entity" datasets in code. Most hosts
+ * don't need it: the entities under the packages listed in
+ * {@code dynamic-reports.properties} are registered automatically. Beans of
+ * this type add to that list (table-based datasets are unaffected).
  */
 public interface ReportableEntityRegistry {
 
