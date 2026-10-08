@@ -8,6 +8,7 @@
     <cc:interface/>
 
     <cc:implementation>
+        <h:outputStylesheet library="reporting" name="primeicons/primeicons.css"/>
         <ui:fragment rendered="#{not reportingAccessBean.administrator}">
             <div style="padding:16px;color:#991b1b;">You do not have permission to view this page.</div>
         </ui:fragment>
@@ -42,13 +43,13 @@
                                 <p:selectBooleanCheckbox value="#{row.visible}"/>
                             </p:column>
                             <p:column style="width:100px;">
-                                <p:commandButton value="Columns" icon="fa fa-table"
+                                <p:commandButton value="Columns" icon="pi pi-table"
                                                  actionListener="#{tableVisibilityAdminBean.editColumns(row.tableName)}"
                                                  process="@this" update=":visUI:tableVisibilityForm:visTabs:columnsPanel"
                                                  styleClass="blue-btn MarginLeft5"/>
                             </p:column>
                         </p:dataTable>
-                        <p:commandButton value="Save All Changes" icon="fa fa-check"
+                        <p:commandButton value="Save All Changes" icon="pi pi-check"
                                          actionListener="#{tableVisibilityAdminBean.saveTables()}"
                                          process="@form" update=":visUI:tableVisibilityForm:visTabs:tablesGrid :visUI:tableVisibilityForm:msgs"
                                          styleClass="green-btn MarginTop5"/>
@@ -59,7 +60,7 @@
                             <div class="card MarginTop5">
                                 <div style="display:flex;align-items:center;justify-content:space-between;">
                                     <h3 style="margin:0;">Columns of #{tableVisibilityAdminBean.selectedTableName}</h3>
-                                    <p:commandButton value="Close" icon="fa fa-times"
+                                    <p:commandButton value="Close" icon="pi pi-times"
                                                      actionListener="#{tableVisibilityAdminBean.closeColumns()}"
                                                      process="@this" update=":visUI:tableVisibilityForm:visTabs:columnsPanel"/>
                                 </div>
@@ -103,7 +104,7 @@
                                     built from this table - each dataset's own column configuration can still be
                                     adjusted independently afterwards.
                                 </p>
-                                <p:commandButton value="Save Column Configuration" icon="fa fa-check"
+                                <p:commandButton value="Save Column Configuration" icon="pi pi-check"
                                                  actionListener="#{tableVisibilityAdminBean.saveColumns()}"
                                                  process="@form" update=":visUI:tableVisibilityForm:msgs"
                                                  styleClass="green-btn MarginTop5"/>
@@ -128,7 +129,7 @@
                                 <p:inputText value="#{row.displayName}" placeholder="#{row.defaultLabel}" style="width:100%;"/>
                             </p:column>
                         </p:dataTable>
-                        <p:commandButton value="Save Display Names" icon="fa fa-check"
+                        <p:commandButton value="Save Display Names" icon="pi pi-check"
                                          actionListener="#{tableVisibilityAdminBean.saveEntityDisplayNames()}"
                                          process="@form" update=":visUI:tableVisibilityForm:visTabs:entityDisplayGrid :visUI:tableVisibilityForm:msgs"
                                          styleClass="green-btn MarginTop5"/>

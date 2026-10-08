@@ -13,6 +13,7 @@
 
     <cc:implementation>
         <h:outputStylesheet library="reporting" name="reporting.css"/>
+        <h:outputStylesheet library="reporting" name="primeicons/primeicons.css"/>
         <h:form id="f">
             <p:growl id="msgs" showDetail="true" life="4000"><p:autoUpdate/></p:growl>
 
@@ -63,7 +64,7 @@
                             </h:outputText>
                         </p:column>
                         <p:column style="width:150px;text-align:right;white-space:nowrap;">
-                            <p:button icon="pi pi-play" title="Run report" styleClass="rpt-icon-btn" outcome="#{cc.attrs.editorPage}">
+                            <p:button icon="pi pi-caret-right" title="Run report" styleClass="rpt-icon-btn" outcome="#{cc.attrs.editorPage}">
                                 <f:param name="reportId" value="#{report.id}"/>
                                 <f:param name="mode" value="run"/>
                             </p:button>

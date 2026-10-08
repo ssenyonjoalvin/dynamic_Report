@@ -8,6 +8,7 @@
     <cc:interface/>
 
     <cc:implementation>
+        <h:outputStylesheet library="reporting" name="primeicons/primeicons.css"/>
         <ui:fragment rendered="#{not reportingAccessBean.administrator}">
             <div style="padding:16px;color:#991b1b;">You do not have permission to view this page.</div>
         </ui:fragment>
@@ -17,7 +18,7 @@
             <div class="card">
                 <div style="display:flex;align-items:center;margin-bottom:8px;">
                     <h3 style="margin:0;">Report Datasets</h3>
-                    <p:commandButton value="New Dataset" icon="fa fa-plus"
+                    <p:commandButton value="New Dataset" icon="pi pi-plus"
                                      actionListener="#{reportDatasetAdminBean.newDataset()}"
                                      process="@this" update=":rptAdminUI:reportDatasetAdminForm:editPanel"
                                      styleClass="green-btn MarginLeft5"/>
@@ -34,11 +35,11 @@
                         <h:outputText value="#{dataset.enabled ? 'Yes' : 'No'}"/>
                     </p:column>
                     <p:column style="width:160px;">
-                        <p:commandButton value="Edit" icon="fa fa-pencil"
+                        <p:commandButton value="Edit" icon="pi pi-pencil"
                                          actionListener="#{reportDatasetAdminBean.edit(dataset)}"
                                          process="@this" update=":rptAdminUI:reportDatasetAdminForm:editPanel"
                                          styleClass="blue-btn MarginLeft5"/>
-                        <p:commandButton icon="fa fa-trash" title="Delete"
+                        <p:commandButton icon="pi pi-trash" title="Delete"
                                          actionListener="#{reportDatasetAdminBean.delete(dataset)}"
                                          process="@this" update=":rptAdminUI:reportDatasetAdminForm"
                                          styleClass="red-btn MarginLeft5">
@@ -171,7 +172,7 @@
                             </p:dataTable>
                         </p:outputPanel>
 
-                        <p:commandButton value="Save Dataset" icon="fa fa-check"
+                        <p:commandButton value="Save Dataset" icon="pi pi-check"
                                          actionListener="#{reportDatasetAdminBean.save()}"
                                          process="@form" update=":rptAdminUI:reportDatasetAdminForm"
                                          styleClass="green-btn MarginTop5"/>

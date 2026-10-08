@@ -59,13 +59,6 @@
 			<version>7.0</version>
 		</dependency>
 
-		<!-- California theme -->
-		<dependency>
-			<groupId>org.primefaces.themes</groupId>
-			<artifactId>california</artifactId>
-			<version>3.0.0</version>
-		</dependency>
-
 		<!-- HIBERNATE -->
 		<dependency>
 			<groupId>org.hibernate</groupId>

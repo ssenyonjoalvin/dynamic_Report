@@ -219,6 +219,15 @@
     color: var(--rpt-danger);
 }
 
+/* Themes such as Ultima colour button icons white ("body .ui-button .ui-icon"); on these
+   transparent/white buttons the icon must follow the button's own colour instead.
+   !important because theme state rules (hover, focus, active) can be more specific. */
+body .rpt .rpt-icon-btn.ui-button .ui-icon,
+body .rpt .rpt-btn-outline.ui-button .ui-icon,
+body .rpt .rpt-btn-outline-warn.ui-button .ui-icon {
+    color: inherit !important;
+}
+
 /* Outline buttons */
 .rpt .rpt-btn-outline.ui-button {
     background: #fff;

@@ -19,6 +19,7 @@
 
     <cc:implementation>
         <h:outputStylesheet library="reporting" name="reporting.css"/>
+        <h:outputStylesheet library="reporting" name="primeicons/primeicons.css"/>
         <h:form id="f">
             <p:growl id="msgs" showDetail="true" life="4000"><p:autoUpdate/></p:growl>
 
@@ -356,7 +357,7 @@
                     <!-- =============================================== PREVIEW -->
                     <p:tab title="Preview">
                         <div class="rpt-actions">
-                            <p:commandButton value="Run preview" icon="pi pi-play"
+                            <p:commandButton value="Run preview" icon="pi pi-caret-right"
                                              actionListener="#{reportEditorBean.preview()}"
                                              process="@form" update="@(.rpt-preview) @(.rpt-error-panel)"/>
                             <p:commandButton value="Export CSV" icon="pi pi-download" ajax="false" styleClass="rpt-btn-outline"
