@@ -19,16 +19,16 @@ public class DatabaseTableDiscoveryServiceImpl implements DatabaseTableDiscovery
     private static final Set<String> EXCLUDED_TABLES = new HashSet<String>();
 
     static {
-        EXCLUDED_TABLES.add("kpi_report_datasets");
-        EXCLUDED_TABLES.add("kpi_report_dataset_columns");
-        EXCLUDED_TABLES.add("kpi_saved_reports");
-        EXCLUDED_TABLES.add("kpi_report_filters");
-        EXCLUDED_TABLES.add("kpi_report_sorts");
-        EXCLUDED_TABLES.add("kpi_saved_report_columns");
-        EXCLUDED_TABLES.add("kpi_table_visibility_configs");
-        EXCLUDED_TABLES.add("kpi_table_visibility_hidden_columns");
-        EXCLUDED_TABLES.add("kpi_table_visibility_filterable_columns");
-        EXCLUDED_TABLES.add("kpi_table_visibility_sortable_columns");
+        EXCLUDED_TABLES.add("report_datasets");
+        EXCLUDED_TABLES.add("report_dataset_columns");
+        EXCLUDED_TABLES.add("saved_reports");
+        EXCLUDED_TABLES.add("report_filters");
+        EXCLUDED_TABLES.add("report_sorts");
+        EXCLUDED_TABLES.add("saved_report_columns");
+        EXCLUDED_TABLES.add("table_visibility_configs");
+        EXCLUDED_TABLES.add("table_visibility_hidden_columns");
+        EXCLUDED_TABLES.add("table_visibility_filterable_columns");
+        EXCLUDED_TABLES.add("table_visibility_sortable_columns");
         EXCLUDED_TABLES.add("table_display_config");
         EXCLUDED_TABLES.add("saved_reports");
     }

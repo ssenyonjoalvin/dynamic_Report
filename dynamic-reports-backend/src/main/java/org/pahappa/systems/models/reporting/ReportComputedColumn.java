@@ -12,7 +12,7 @@ import javax.persistence.*;
  * number.
  */
 @Entity
-@Table(name = "kpi_report_computed_columns")
+@Table(name = "report_computed_columns")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class ReportComputedColumn extends BaseEntity {
 
