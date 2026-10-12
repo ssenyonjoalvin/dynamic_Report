@@ -5,7 +5,7 @@ import org.sers.webutils.model.BaseEntity;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "report_sorts")
+@Table(name = "dyn_report_sorts")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class ReportSort extends BaseEntity {
     private SavedReport savedReport;

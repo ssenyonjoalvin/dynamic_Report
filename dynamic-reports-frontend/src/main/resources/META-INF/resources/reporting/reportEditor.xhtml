@@ -257,8 +257,13 @@
                                              draggableRows="true" styleClass="rpt-table"
                                              emptyMessage="No columns yet - tick some under Visible columns above.">
                                     <!-- No listener: PrimeFaces itself moves the row in the bound list while decoding
-                                         the drop, so moving it again here would shift it a second time. -->
-                                    <p:ajax event="rowReorder" process="@this" update="@(.rpt-columns)"/>
+                                         the drop, so moving it again here would shift it a second time.
+                                         Submit no inputs: the list is reordered before the row inputs are decoded,
+                                         so each custom header would be written to whichever column now sits in its
+                                         old row. Headers save themselves on change, and the drop's from/to indexes
+                                         travel as their own request parameters. -->
+                                    <p:ajax event="rowReorder" process="@this" update="@(.rpt-columns)"
+                                            partialSubmit="true" partialSubmitFilter=":not(:input)"/>
                                     <p:column styleClass="rpt-col-icon">
                                         <i class="pi pi-bars rpt-drag" title="Drag to reorder"/>
                                     </p:column>

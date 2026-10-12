@@ -12,7 +12,7 @@ import javax.persistence.*;
  * number.
  */
 @Entity
-@Table(name = "report_computed_columns")
+@Table(name = "dyn_report_computed_columns")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class ReportComputedColumn extends BaseEntity {
 

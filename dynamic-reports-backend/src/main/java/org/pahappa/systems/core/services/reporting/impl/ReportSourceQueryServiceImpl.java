@@ -632,7 +632,7 @@ public class ReportSourceQueryServiceImpl implements ReportSourceQueryService {
 
     private Pred compileFilter(ReportFilter filter, FieldMeta meta, int number) {
         FieldKind kind = meta.field.getKind();
-        FilterOperator op = filter.getOperator();
+        FilterOperator op = filter.getOperator() == null ? null : filter.getOperator().canonical();
         if (!kind.supports(op)) {
             return null;
         }
@@ -640,14 +640,10 @@ public class ReportSourceQueryServiceImpl implements ReportSourceQueryService {
         String which = "Filter " + number + " (" + meta.field.getLabel() + "): ";
 
         switch (op) {
-            case IS_NULL:
-                return new IsNull(key);
-            case IS_NOT_NULL:
-                return new Not(new IsNull(key));
             case IS_EMPTY:
-                return new Or(Arrays.<Pred>asList(new IsNull(key), new Compare(key, "=", "")));
+                return isEmpty(key, kind);
             case IS_NOT_EMPTY:
-                return new Not(new Or(Arrays.<Pred>asList(new IsNull(key), new Compare(key, "=", ""))));
+                return new Not(isEmpty(key, kind));
             case IS_TRUE:
                 return new Compare(key, "=", Boolean.TRUE);
             case IS_FALSE:
@@ -820,6 +816,15 @@ public class ReportSourceQueryServiceImpl implements ReportSourceQueryService {
         return And.of(Arrays.<Pred>asList(new Compare(key, ">=", fromInclusive), new Compare(key, "<", toExclusive)));
     }
 
+    /**
+     * No value at all, for any kind; text also counts blank (empty or
+     * whitespace-only) as empty. Only text is compared with '': numbers,
+     * dates, yes/no, choices and linked records can't hold it.
+     */
+    private Pred isEmpty(String key, FieldKind kind) {
+        return kind == FieldKind.TEXT ? new Or(Arrays.<Pred>asList(new IsNull(key), new Blank(key))) : new IsNull(key);
+    }
+
     private Pred negateIncludingMissing(String key, Pred pred) {
         return new Or(Arrays.<Pred>asList(new IsNull(key), new Not(pred)));
     }
@@ -854,6 +859,9 @@ public class ReportSourceQueryServiceImpl implements ReportSourceQueryService {
         Object actual = comparable(resolve(entity, meta));
         if (pred instanceof IsNull) {
             return actual == null;
+        }
+        if (pred instanceof Blank) {
+            return actual != null && String.valueOf(actual).trim().isEmpty();
         }
         if (actual == null) {
             return false;
@@ -1027,6 +1035,9 @@ public class ReportSourceQueryServiceImpl implements ReportSourceQueryService {
             if (pred instanceof IsNull) {
                 return "(" + path + " IS NULL)";
             }
+            if (pred instanceof Blank) {
+                return "(trim(" + path + ") = '')";
+            }
             if (pred instanceof InList) {
                 StringBuilder sb = new StringBuilder("(").append(path).append(" IN (");
                 List<Object> values = ((InList) pred).values;
@@ -1196,6 +1207,13 @@ public class ReportSourceQueryServiceImpl implements ReportSourceQueryService {
 
     private static final class IsNull extends Leaf {
         IsNull(String field) {
+            super(field);
+        }
+    }
+
+    /** A text value that is empty or only whitespace (not null). */
+    private static final class Blank extends Leaf {
+        Blank(String field) {
             super(field);
         }
     }
