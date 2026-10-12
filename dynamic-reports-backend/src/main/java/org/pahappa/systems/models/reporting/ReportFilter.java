@@ -10,7 +10,7 @@ import java.util.Date;
 import java.util.List;
 
 @Entity
-@Table(name = "kpi_report_filters")
+@Table(name = "report_filters")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class ReportFilter extends BaseEntity {
 
@@ -68,7 +68,7 @@ public class ReportFilter extends BaseEntity {
 
     /** The picked values for multi-value operators ("is one of", "is not one of"). */
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "kpi_report_filter_values", joinColumns = @JoinColumn(name = "report_filter_id"))
+    @CollectionTable(name = "report_filter_values", joinColumns = @JoinColumn(name = "report_filter_id"))
     @OrderColumn(name = "value_order")
     @Column(name = "filter_value", length = 1024)
     public List<String> getValues() {

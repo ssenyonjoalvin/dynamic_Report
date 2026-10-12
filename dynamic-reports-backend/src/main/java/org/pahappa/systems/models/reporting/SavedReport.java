@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 @Entity
-@Table(name = "kpi_saved_reports")
+@Table(name = "saved_reports")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class SavedReport extends BaseEntity {
     private String name;
@@ -62,14 +62,14 @@ public class SavedReport extends BaseEntity {
     }
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "kpi_saved_report_columns", joinColumns = @JoinColumn(name = "saved_report_id"))
+    @CollectionTable(name = "saved_report_columns", joinColumns = @JoinColumn(name = "saved_report_id"))
     @Column(name = "field_name")
     public List<String> getSelectedColumns() {
         return this.selectedColumns;
     }
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "kpi_saved_report_column_aliases", joinColumns = @JoinColumn(name = "saved_report_id"))
+    @CollectionTable(name = "saved_report_column_aliases", joinColumns = @JoinColumn(name = "saved_report_id"))
     @MapKeyColumn(name = "field_name")
     @Column(name = "display_name")
     public Map<String, String> getColumnAliases() {

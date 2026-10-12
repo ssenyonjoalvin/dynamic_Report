@@ -7,7 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "kpi_table_visibility_configs")
+@Table(name = "table_visibility_configs")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class TableVisibilityConfig extends BaseEntity {
     private String tableName;
@@ -36,21 +36,21 @@ public class TableVisibilityConfig extends BaseEntity {
     }
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "kpi_table_visibility_hidden_columns", joinColumns = @JoinColumn(name = "table_visibility_config_id"))
+    @CollectionTable(name = "table_visibility_hidden_columns", joinColumns = @JoinColumn(name = "table_visibility_config_id"))
     @Column(name = "column_name")
     public Set<String> getHiddenColumns() {
         return this.hiddenColumns;
     }
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "kpi_table_visibility_filterable_columns", joinColumns = @JoinColumn(name = "table_visibility_config_id"))
+    @CollectionTable(name = "table_visibility_filterable_columns", joinColumns = @JoinColumn(name = "table_visibility_config_id"))
     @Column(name = "column_name")
     public Set<String> getFilterableColumns() {
         return this.filterableColumns;
     }
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "kpi_table_visibility_sortable_columns", joinColumns = @JoinColumn(name = "table_visibility_config_id"))
+    @CollectionTable(name = "table_visibility_sortable_columns", joinColumns = @JoinColumn(name = "table_visibility_config_id"))
     @Column(name = "column_name")
     public Set<String> getSortableColumns() {
         return this.sortableColumns;

@@ -13,7 +13,7 @@ import javax.persistence.Table;
  * constant, identified by its key). A source with no config row is available.
  */
 @Entity
-@Table(name = "kpi_report_source_configs")
+@Table(name = "report_source_configs")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class ReportSourceConfig extends BaseEntity {
 
