@@ -87,7 +87,9 @@ host's Spring component scan and JPA entity scan normally already cover that pac
 picked up with no extra configuration. If your host scans narrower packages, add
 `org.pahappa.systems.core.services.reporting`, `org.pahappa.systems.reporting.support` (Spring) and
 `org.pahappa.systems.models.reporting` (JPA) to those scans. The plugin's tables are all prefixed
-`kpi_` (e.g. `kpi_saved_reports`) and are created by Hibernate's schema update like any other entity.
+`dyn_report_` (e.g. `dyn_report_saved_reports`) and are created by Hibernate's schema update like any other
+entity. The prefix keeps them clear of other plugins' tables - dynamic-dashboards, for one, creates its own
+`saved_reports` table - so don't shorten the names.
 
 ### 3. Tell the plugin where your models are
 

@@ -16,21 +16,15 @@ import java.util.Set;
 @Service("kpiDatabaseTableDiscoveryService")
 public class DatabaseTableDiscoveryServiceImpl implements DatabaseTableDiscoveryService {
 
+    /** This plugin's own tables all start with this prefix and are never offered as report tables. */
+    private static final String OWN_TABLE_PREFIX = "dyn_report_";
+
+    /** Other plugins' internal tables (dynamic-dashboards) that are not business data either. */
     private static final Set<String> EXCLUDED_TABLES = new HashSet<String>();
 
     static {
-        EXCLUDED_TABLES.add("report_datasets");
-        EXCLUDED_TABLES.add("report_dataset_columns");
         EXCLUDED_TABLES.add("saved_reports");
-        EXCLUDED_TABLES.add("report_filters");
-        EXCLUDED_TABLES.add("report_sorts");
-        EXCLUDED_TABLES.add("saved_report_columns");
-        EXCLUDED_TABLES.add("table_visibility_configs");
-        EXCLUDED_TABLES.add("table_visibility_hidden_columns");
-        EXCLUDED_TABLES.add("table_visibility_filterable_columns");
-        EXCLUDED_TABLES.add("table_visibility_sortable_columns");
         EXCLUDED_TABLES.add("table_display_config");
-        EXCLUDED_TABLES.add("saved_reports");
     }
 
     @Autowired
@@ -44,7 +38,8 @@ public class DatabaseTableDiscoveryServiceImpl implements DatabaseTableDiscovery
             try (ResultSet rs = meta.getTables(connection.getCatalog(), null, "%", new String[]{"TABLE"})) {
                 while (rs.next()) {
                     String tableName = rs.getString("TABLE_NAME");
-                    if (tableName != null && !EXCLUDED_TABLES.contains(tableName.toLowerCase())) {
+                    if (tableName != null && !tableName.toLowerCase().startsWith(OWN_TABLE_PREFIX)
+                            && !EXCLUDED_TABLES.contains(tableName.toLowerCase())) {
                         tables.add(tableName);
                     }
                 }

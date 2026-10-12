@@ -13,7 +13,7 @@ import javax.persistence.Table;
  * analogous to {@link TableVisibilityConfig#getDisplayName()} for tables.
  */
 @Entity
-@Table(name = "report_entity_display_configs")
+@Table(name = "dyn_report_entity_display_configs")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class EntityDisplayConfig extends BaseEntity {
 

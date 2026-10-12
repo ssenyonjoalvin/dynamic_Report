@@ -26,6 +26,15 @@ public enum FilterOperator {
     IS_TRUE,
     IS_FALSE;
 
+    /**
+     * The operator to apply. "Is not set" and "is set" (IS_NULL, IS_NOT_NULL)
+     * from older reports are the same test as "is empty" and "is not empty",
+     * which every field kind now offers, so they are read as those.
+     */
+    public FilterOperator canonical() {
+        return this == IS_NULL ? IS_EMPTY : this == IS_NOT_NULL ? IS_NOT_EMPTY : this;
+    }
+
     /** The operator compares against a single typed-in or picked value. */
     public boolean needsValue() {
         return this != IS_NULL && this != IS_NOT_NULL && this != IS_EMPTY && this != IS_NOT_EMPTY

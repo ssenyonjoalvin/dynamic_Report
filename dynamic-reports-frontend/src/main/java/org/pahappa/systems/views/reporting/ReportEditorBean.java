@@ -120,7 +120,7 @@ public class ReportEditorBean implements Serializable {
         for (ReportFilter filter : this.reportFilterService.getForReport(source)) {
             ReportFilter filterCopy = new ReportFilter();
             filterCopy.setFieldName(filter.getFieldName());
-            filterCopy.setOperator(filter.getOperator());
+            filterCopy.setOperator(filter.getOperator() != null ? filter.getOperator().canonical() : null);
             filterCopy.setConnector(filter.getConnector() != null ? filter.getConnector() : FilterConnector.AND);
             filterCopy.setValue(filter.getValue());
             filterCopy.setValue2(filter.getValue2());
