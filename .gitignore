@@ -47,3 +47,4 @@ pahappa-web-template.iml
 .smarttomcat/
 **/*.bat
 out/*
+/.idea

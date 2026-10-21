@@ -2,6 +2,8 @@ package org.pahappa.systems.core.services.reporting.impl;
 
 import com.googlecode.genericdao.search.Search;
 import org.pahappa.systems.core.services.reporting.DiscoveredReportSource;
+import org.pahappa.systems.core.services.reporting.EntityDiscoveryService;
+import org.pahappa.systems.core.services.reporting.EntityDiscoveryService.DiscoveredField;
 import org.pahappa.systems.core.services.reporting.ReportSourceDefinition;
 import org.pahappa.systems.core.services.reporting.ReportSourceRegistry;
 import org.pahappa.systems.core.services.reporting.ReportSourceService;
@@ -42,9 +44,19 @@ public class ReportSourceServiceImpl extends GenericServiceImpl<ReportSourceConf
     /** Entity names containing these never become sources (OTP, password-reset and token tables). */
     private static final String[] SENSITIVE_NAME_PARTS = {"password", "otp", "token", "secret", "salt"};
 
+    /** At most this many example field names, links or enum values are listed in a description. */
+    private static final int MAX_EXAMPLES = 4;
+
+    /** At most this many enum fields get their options spelled out. */
+    private static final int MAX_ENUM_FIELDS = 2;
+
     /** Optional: hand-curated sources. When none are registered, every mapped entity is discovered. */
     @Autowired(required = false)
     private List<ReportSourceRegistry> registries;
+
+    /** Supplies the same field list the report column picker offers, so descriptions match what users can pick. */
+    @Autowired
+    private EntityDiscoveryService entityDiscoveryService;
 
     @PersistenceContext
     private EntityManager discoveryEntityManager;
@@ -151,8 +163,85 @@ public class ReportSourceServiceImpl extends GenericServiceImpl<ReportSourceConf
         return false;
     }
 
-    /** "Requisition records, linked to Annual Budget and Requisition Category." */
+    /**
+     * Plain-language summary for the "What it includes" column, so an admin
+     * can tell what a source is and what it holds without opening it. It says
+     * what the records are, how many fields the source offers with a few
+     * examples, the options of any choice (enum) fields, and the entities the
+     * records link to, e.g.:
+     *
+     * <pre>
+     * Requisition records. Contains 24 fields such as Reference, Amount, Status
+     * and Due date. Options: Status (Open, In progress, Closed, Rejected and 2
+     * more). Links to Annual Budget and Requisition Category.
+     * </pre>
+     *
+     * Anything that cannot be determined (no fields found, discovery not
+     * approved) is left out rather than guessed at.
+     */
     private String describe(Class<?> type, String label) {
+        StringBuilder description = new StringBuilder(label).append(" records");
+        List<DiscoveredField> fields = discoverFieldsQuietly(type);
+        if (!fields.isEmpty()) {
+            List<String> examples = new ArrayList<String>();
+            for (int i = 0; i < Math.min(fields.size(), MAX_EXAMPLES); i++) {
+                examples.add(fields.get(i).getLabel());
+            }
+            description.append(". Contains ").append(fields.size())
+                    .append(fields.size() == 1 ? " field" : " fields")
+                    .append(fields.size() <= MAX_EXAMPLES ? ": " : " such as ")
+                    .append(joinExamples(examples));
+        }
+        String options = enumOptions(fields);
+        if (!options.isEmpty()) {
+            description.append(". Options: ").append(options);
+        }
+        List<String> links = linkedEntityNames(type);
+        if (!links.isEmpty()) {
+            description.append(". Links to ").append(joinExamples(links));
+        }
+        return description.append('.').toString();
+    }
+
+    /** The entity's own fields as the report column picker offers them; never throws. */
+    private List<DiscoveredField> discoverFieldsQuietly(Class<?> type) {
+        if (this.entityDiscoveryService == null) {
+            return Collections.emptyList();
+        }
+        try {
+            List<DiscoveredField> fields = this.entityDiscoveryService.discoverFields(type);
+            return fields == null ? Collections.<DiscoveredField>emptyList() : fields;
+        } catch (RuntimeException e) {
+            // entity not on the reporting whitelist - describe without fields
+            return Collections.emptyList();
+        }
+    }
+
+    /** "Status (Open, In progress, Closed) and Gender (Male, Female)"; empty when the source has no enum fields. */
+    private String enumOptions(List<DiscoveredField> fields) {
+        List<String> parts = new ArrayList<String>();
+        for (DiscoveredField field : fields) {
+            if (parts.size() >= MAX_ENUM_FIELDS) {
+                break;
+            }
+            if (!field.isEnumType() || field.getJavaType() == null) {
+                continue;
+            }
+            Object[] constants = field.getJavaType().getEnumConstants();
+            if (constants == null || constants.length == 0) {
+                continue;
+            }
+            List<String> values = new ArrayList<String>();
+            for (Object constant : constants) {
+                values.add(ReportValues.enumLabel((Enum<?>) constant));
+            }
+            parts.add(field.getLabel() + " (" + joinExamples(values) + ")");
+        }
+        return joinExamples(parts);
+    }
+
+    /** Linked entities by name, in declaration order, e.g. ["Annual Budget", "Requisition Category"]. */
+    private List<String> linkedEntityNames(Class<?> type) {
         List<String> links = new ArrayList<String>();
         try {
             for (PropertyDescriptor descriptor : Introspector.getBeanInfo(type, BaseEntity.class).getPropertyDescriptors()) {
@@ -165,18 +254,23 @@ public class ReportSourceServiceImpl extends GenericServiceImpl<ReportSourceConf
         } catch (Exception e) {
             // describe without links
         }
-        StringBuilder description = new StringBuilder(label).append(" records");
-        if (!links.isEmpty()) {
-            int shown = Math.min(links.size(), 4);
-            description.append(", linked to ");
-            for (int i = 0; i < shown; i++) {
-                description.append(i == 0 ? "" : (i == shown - 1 && links.size() <= 4 ? " and " : ", ")).append(links.get(i));
+        return links;
+    }
+
+    /** "A", "A and B", "A, B and C"; longer lists show the first four plus "and N more". */
+    private static String joinExamples(List<String> names) {
+        StringBuilder text = new StringBuilder();
+        int shown = Math.min(names.size(), MAX_EXAMPLES);
+        for (int i = 0; i < shown; i++) {
+            if (i > 0) {
+                text.append(i == shown - 1 && names.size() <= MAX_EXAMPLES ? " and " : ", ");
             }
-            if (links.size() > 4) {
-                description.append(" and ").append(links.size() - 4).append(" more");
-            }
+            text.append(names.get(i));
         }
-        return description.append('.').toString();
+        if (names.size() > MAX_EXAMPLES) {
+            text.append(" and ").append(names.size() - MAX_EXAMPLES).append(" more");
+        }
+        return text.toString();
     }
 
     @Override
